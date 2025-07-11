@@ -179,4 +179,5 @@ def run(job):
  
 if __name__ == '__main__':
         logging.info("Starting RunPod serverless handler.")
+        print("Hello world")
         runpod.serverless.start({"handler": run})
