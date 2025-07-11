@@ -96,29 +96,37 @@ def stringToImage(base64_string):
 # Enhance_model.load_weights('weights/RealESRGAN_x4.pth', download=False)
 
 def load_model(scale):
-    logging.info(f"Loading RealEsgran Model with scale {scale}")
-    weights_dir="weights"
-    os.makedirs(weights_dir,exist_ok=True)
-
-    if scale==2:
-        filename="RealESRGAN_x2.pth"
-        gdriveID="1g-SQ2DgRu4ZJrBzYyvGO0SYY7Qf2gZZC"
-    elif scale==4:
-        filename="RealESRGAN_x4.pth"
-        gdriveID="1K0csgiub_sUbxASV1lvE7YKcmBgsgPAq"
-    else:
-        raise ValueError("Unsupported scale.")
+    logging.info(f"Loading RealESRGAN model with scale {scale}x...")
     
-    checkpoint_path=os.path.join(weights_dir,filename)
+    weights_dir = "weights"
+    os.makedirs(weights_dir, exist_ok=True)
+
+    if scale == 2:
+        filename = "RealESRGAN_x2.pth"
+        gdriveID = "1g-SQ2DgRu4ZJrBzYyvGO0SYY7Qf2gZZC"
+    elif scale == 4:
+        filename = "RealESRGAN_x4.pth"
+        gdriveID = "1K0csgiub_sUbxASV1lvE7YKcmBgsgPAq"
+    else:
+        raise ValueError(f"Unsupported scale: {scale}. Supported scales are 2 and 4.")
+
+    # Ensure filename matches the expected scale
+    assert str(scale) in filename, f"Mismatch between scale and filename: {filename}"
+
+    checkpoint_path = os.path.join(weights_dir, filename)
 
     if not os.path.exists(checkpoint_path):
-        logging.info(f"Douwnloading model weights from Google drive fpr scale {scale}x")
-        gdown.download(f"https://drive.google.com/uc?id={gdriveID}", checkpoint_path,fuzzy=True)
-    
-    model=RealESRGAN(device,scale=scale)
-    model.load_weights(checkpoint_path,download=False)
-    logging.info(f"Model for scale {scale}x loaded")
+        logging.info(f"Downloading model weights from Google Drive for scale {scale}x")
+        gdown.download(f"https://drive.google.com/uc?id={gdriveID}", checkpoint_path, fuzzy=True)
+        if not os.path.exists(checkpoint_path):
+            raise FileNotFoundError(f"Failed to download model weights for scale {scale}")
+
+    model = RealESRGAN(device, scale=scale)
+    model.load_weights(checkpoint_path, download=False)
+    logging.info(f"Model for scale {scale}x loaded successfully.")
+
     return model
+
 
 
 def run(job):
