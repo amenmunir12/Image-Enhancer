@@ -102,7 +102,7 @@ def load_model(scale):
 
     if scale == 2:
         filename = "RealESRGAN_x2.pth"
-        gdriveID = "1fJR3UWIRZN8-nU_0aNh5Yt67ZXeysuTe"  # ✅ Your working Google Drive ID
+        gdriveID = "1fJR3UWIRZN8-nU_0aNh5Yt67ZXeysuTe" 
     elif scale == 4:
         filename = "RealESRGAN_x4.pth"
         gdriveID = "1K0csgiub_sUbxASV1lvE7YKcmBgsgPAq"
