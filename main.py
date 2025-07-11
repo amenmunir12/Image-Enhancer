@@ -18,6 +18,7 @@ import io
 import cloudinary.uploader
 import cloudinary.api
 
+models={}
 
 # Cloudinary configuration (as shown above)
 cloudinary.config(
@@ -60,45 +61,77 @@ def stringToImage(base64_string):
     imgdata = base64.b64decode(base64_string)
     return Image.open(io.BytesIO(imgdata))
 
-# Path for the weights directory and model file
-weights_dir = "weights"
-checkpoint_path = os.path.join(weights_dir, "RealESRGAN_x4.pth")
+# # Path for the weights directory and model file
+# weights_dir = "weights"
+# checkpoint_path = os.path.join(weights_dir, "RealESRGAN_x4.pth")
 
-# Ensure the weights directory exists
-if not os.path.exists(weights_dir):
-    os.makedirs(weights_dir)
-    logging.info(f"Created directory: {weights_dir}")
+# # Ensure the weights directory exists
+# if not os.path.exists(weights_dir):
+#     os.makedirs(weights_dir)
+#     logging.info(f"Created directory: {weights_dir}")
 
-# Check if the model file exists
-if not os.path.exists(checkpoint_path):
-    print("Model file not found. Downloading...")
-    logging.info("Model file not found. Downloading...")
+# # Check if the model file exists
+# if not os.path.exists(checkpoint_path):
+#     print("Model file not found. Downloading...")
+#     logging.info("Model file not found. Downloading...")
     
-    # Google Drive link (use the correct direct download link or fuzzy=True for ID)
-    link = "https://drive.google.com/uc?id=1K0csgiub_sUbxASV1lvE7YKcmBgsgPAq"  # Updated for direct download
+#     # Google Drive link (use the correct direct download link or fuzzy=True for ID)
+#     link = "https://drive.google.com/uc?id=1K0csgiub_sUbxASV1lvE7YKcmBgsgPAq"  # Updated for direct download
     
-    # Download the model file
-    gdown.download(link, checkpoint_path, quiet=False, fuzzy=True)
+#     # Download the model file
+#     gdown.download(link, checkpoint_path, quiet=False, fuzzy=True)
     
-    if os.path.exists(checkpoint_path):
-        print("Download complete.")
-        logging.info("Download complete.")
+#     if os.path.exists(checkpoint_path):
+#         print("Download complete.")
+#         logging.info("Download complete.")
+#     else:
+#         print("Error: Download failed.")
+#         logging.error("Error: Download failed.")
+# else:
+#     logging.info("Model file found. Skipping download.")
+#     print("Model file found. Skipping download.")
+
+
+# Enhance_model = RealESRGAN(device, scale=4)
+# Enhance_model.load_weights('weights/RealESRGAN_x4.pth', download=False)
+
+def load_model(scale):
+    logging.info(f"Loading RealEsgran Model with scale {scale}")
+    weights_dir="weights"
+    os.makedirs(weights_dir,exist_ok=True)
+
+    if scale==2:
+        filename="RealESRGAN_x2.pth"
+        gdriveID="1g-SQ2DgRu4ZJrBzYyvGO0SYY7Qf2gZZC"
+    elif scale==4:
+        filename="RealESRGAN_x4.pth"
+        gdriveID="1K0csgiub_sUbxASV1lvE7YKcmBgsgPAq"
     else:
-        print("Error: Download failed.")
-        logging.error("Error: Download failed.")
-else:
-    logging.info("Model file found. Skipping download.")
-    print("Model file found. Skipping download.")
+        raise ValueError("Unsupported scale.")
+    
+    checkpoint_path=os.path.join(weights_dir,filename)
 
+    if not os.path.exists(checkpoint_path):
+        logging.info(f"Douwnloading model weights from Google drive fpr scale {scale}x")
+        gdown.download(f"https://drive.google.com/uc?id={gdriveID}", checkpoint_path,fuzzy=True)
+    
+    model=RealESRGAN(device,scale=scale)
+    model.load_weights(checkpoint_path,download=False)
+    logging.info(f"Model for scale {scale}x loaded")
+    return model
 
-Enhance_model = RealESRGAN(device, scale=4)
-Enhance_model.load_weights('weights/RealESRGAN_x4.pth', download=False)
 
 def run(job):
     # Get the uploaded image from the request
     logging.info("New upscaler request received.")
     print("New upscaler request received.")
     job_input = job['input']
+    scale= int(job_input.get('scale', 4))  # I added the scale option to the input
+    if scale not in [2,4]:
+        logging.error(f"Error: {e}")
+        return {"error": "Error: Invalid scale, Supported scales are 2 and 4."}
+        
+    logging.info(f"Job input: {job_input}")
     print(f"new Request recive {time.time()} : {job_input}")
 
     try:
@@ -113,7 +146,13 @@ def run(job):
         # Use BytesIO to treat the raw response content as a file-like object
         image = Image.open(io.BytesIO(response.content))
         stime = time.perf_counter()
+        #image = Enhance_model.predict(image)
+        if scale not in models:
+            models[scale]=load_model(scale)
+            
+        Enhance_model = models[scale]
         image = Enhance_model.predict(image)
+        
         etime = time.perf_counter()
         print(f'Interence time : {str(etime-stime)} sec')
         logging.info(f"Inference completed in {etime - stime:.2f} seconds.")
